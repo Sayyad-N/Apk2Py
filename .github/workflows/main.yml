@@ -45,18 +45,53 @@ jobs:
         echo "=== buildozer.spec content ==="
         cat buildozer.spec
         
+    - name: Setup Android SDK
+      run: |
+        # Download and setup Android SDK
+        wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
+        unzip -q commandlinetools-linux-9477386_latest.zip
+        mkdir -p $HOME/.android/sdk/cmdline-tools
+        mv cmdline-tools $HOME/.android/sdk/cmdline-tools/latest
+        
+        # Set environment variables
+        export ANDROID_SDK_ROOT=$HOME/.android/sdk
+        export ANDROID_HOME=$HOME/.android/sdk
+        export PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin
+        export PATH=$PATH:$ANDROID_SDK_ROOT/platform-tools
+        export PATH=$PATH:$ANDROID_SDK_ROOT/build-tools/34.0.0
+        
+        # Install required SDK components
+        yes | sdkmanager --licenses
+        sdkmanager "platform-tools" "build-tools;34.0.0" "platforms;android-34"
+        
+        # Verify aidl installation
+        echo "=== SDK Structure ==="
+        ls -la $HOME/.android/sdk/
+        echo "=== Build Tools ==="
+        ls -la $HOME/.android/sdk/build-tools/34.0.0/ 2>/dev/null || echo "Build tools not found"
+        
     - name: Build APK with detailed logging
       run: |
         # Set environment variables
         export ANDROID_SDK_ROOT=$HOME/.android/sdk
         export ANDROID_HOME=$HOME/.android/sdk
         export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+        export PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin
+        export PATH=$PATH:$ANDROID_SDK_ROOT/platform-tools
+        export PATH=$PATH:$ANDROID_SDK_ROOT/build-tools/34.0.0
+        
+        # Verify aidl is available
+        echo "=== Checking for aidl ==="
+        which aidl || echo "aidl not in PATH"
+        ls -la $ANDROID_SDK_ROOT/build-tools/34.0.0/aidl 2>/dev/null || echo "aidl not found in build-tools"
         
         # Show environment
         echo "=== Environment ==="
         echo "Python version: $(python --version)"
         echo "Java version: $(java -version)"
         echo "Buildozer version: $(buildozer version)"
+        echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
+        echo "PATH: $PATH"
         
         # Build with maximum verbosity
         buildozer android debug --verbose
