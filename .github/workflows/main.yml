@@ -16,22 +16,70 @@ jobs:
       with:
         python-version: "3.10"
         
-    - name: Install dependencies
+    - name: Install system dependencies
       run: |
         sudo apt update
         sudo apt install -y zip unzip openjdk-17-jdk libncurses5 lib32z1
-        sudo apt install -y build-essential git python3-pip
+        sudo apt install -y build-essential git python3-pip python3-dev
+        sudo apt install -y libffi-dev libssl-dev zlib1g-dev libbz2-dev
+        sudo apt install -y libreadline-dev libsqlite3-dev wget curl llvm
+        
+    - name: Install Python dependencies
+      run: |
         pip install --upgrade pip
         pip install cython buildozer
         
-    - name: Build APK with Buildozer
+    - name: Check project structure
       run: |
+        echo "=== Project files ==="
+        ls -la
+        echo "=== Python files ==="
+        find . -name "*.py" -type f
+        
+    - name: Initialize buildozer if needed
+      run: |
+        if [ ! -f buildozer.spec ]; then
+          echo "Creating buildozer.spec..."
+          buildozer init
+        fi
+        echo "=== buildozer.spec content ==="
+        cat buildozer.spec
+        
+    - name: Build APK with detailed logging
+      run: |
+        # Set environment variables
         export ANDROID_SDK_ROOT=$HOME/.android/sdk
         export ANDROID_HOME=$HOME/.android/sdk
-        yes | buildozer android debug
+        export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+        
+        # Show environment
+        echo "=== Environment ==="
+        echo "Python version: $(python --version)"
+        echo "Java version: $(java -version)"
+        echo "Buildozer version: $(buildozer version)"
+        
+        # Build with maximum verbosity
+        buildozer android debug --verbose
+        
+    - name: Check build output
+      run: |
+        echo "=== Build directory ==="
+        ls -la
+        echo "=== Bin directory ==="
+        ls -la bin/ 2>/dev/null || echo "No bin directory found"
+        echo "=== Buildozer directory ==="
+        ls -la .buildozer/ 2>/dev/null || echo "No .buildozer directory found"
         
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: TapOut-APK
         path: bin/*.apk
+      if: success()
+        
+    - name: Upload logs on failure
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-logs
+        path: .buildozer/
+      if: failure()
