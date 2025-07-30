@@ -47,51 +47,54 @@ jobs:
         
     - name: Setup Android SDK
       run: |
-        # Download and setup Android SDK
+        # Create buildozer Android platform directory
+        mkdir -p $HOME/.buildozer/android/platform
+        
+        # Download and setup Android SDK in buildozer's expected location
+        cd $HOME/.buildozer/android/platform
         wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
         unzip -q commandlinetools-linux-9477386_latest.zip
-        mkdir -p $HOME/.android/sdk/cmdline-tools
-        mv cmdline-tools $HOME/.android/sdk/cmdline-tools/latest
+        mkdir -p android-sdk/cmdline-tools
+        mv cmdline-tools android-sdk/cmdline-tools/latest
         
         # Set environment variables
-        export ANDROID_SDK_ROOT=$HOME/.android/sdk
-        export ANDROID_HOME=$HOME/.android/sdk
+        export ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk
+        export ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk
         export PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin
-        export PATH=$PATH:$ANDROID_SDK_ROOT/platform-tools
-        export PATH=$PATH:$ANDROID_SDK_ROOT/build-tools/34.0.0
         
-        # Install required SDK components
-        yes | sdkmanager --licenses
-        sdkmanager "platform-tools" "build-tools;34.0.0" "platforms;android-34"
+        # Accept licenses and install required components
+        yes | sdkmanager --sdk_root=$ANDROID_SDK_ROOT --licenses
+        sdkmanager --sdk_root=$ANDROID_SDK_ROOT "platform-tools" "build-tools;34.0.0" "platforms;android-34"
         
-        # Verify aidl installation
+        # Verify installation
         echo "=== SDK Structure ==="
-        ls -la $HOME/.android/sdk/
+        ls -la $ANDROID_SDK_ROOT/
         echo "=== Build Tools ==="
-        ls -la $HOME/.android/sdk/build-tools/34.0.0/ 2>/dev/null || echo "Build tools not found"
+        ls -la $ANDROID_SDK_ROOT/build-tools/34.0.0/ 2>/dev/null || echo "Build tools not found"
+        echo "=== Checking aidl ==="
+        ls -la $ANDROID_SDK_ROOT/build-tools/34.0.0/aidl 2>/dev/null || echo "aidl not found"
         
     - name: Build APK with detailed logging
       run: |
-        # Set environment variables
-        export ANDROID_SDK_ROOT=$HOME/.android/sdk
-        export ANDROID_HOME=$HOME/.android/sdk
+        # Set environment variables to point to buildozer's SDK location
+        export ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk
+        export ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk
         export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
         export PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin
         export PATH=$PATH:$ANDROID_SDK_ROOT/platform-tools
         export PATH=$PATH:$ANDROID_SDK_ROOT/build-tools/34.0.0
         
-        # Verify aidl is available
-        echo "=== Checking for aidl ==="
-        which aidl || echo "aidl not in PATH"
-        ls -la $ANDROID_SDK_ROOT/build-tools/34.0.0/aidl 2>/dev/null || echo "aidl not found in build-tools"
+        # Verify buildozer can find the SDK
+        echo "=== Buildozer SDK Check ==="
+        echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
+        ls -la $HOME/.buildozer/android/platform/ 2>/dev/null || echo "Platform directory not found"
+        ls -la $HOME/.buildozer/android/platform/android-sdk/build-tools/ 2>/dev/null || echo "Build tools directory not found"
         
         # Show environment
         echo "=== Environment ==="
         echo "Python version: $(python --version)"
         echo "Java version: $(java -version)"
         echo "Buildozer version: $(buildozer version)"
-        echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
-        echo "PATH: $PATH"
         
         # Build with maximum verbosity
         buildozer android debug --verbose
