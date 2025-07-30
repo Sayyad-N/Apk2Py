@@ -1,37 +1,49 @@
-name: Build APK
+name: Android APK Build for TapOut
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
-  build:
+  build-apk:
+    name: Build APK using Buildozer
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: 3.10
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
-    - name: Install dependencies
-      run: |
-        sudo apt update
-        sudo apt install -y zip unzip openjdk-17-jdk
-        pip install --upgrade pip
-        pip install cython virtualenv
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y zip unzip openjdk-17-jdk python3-pip git curl libncurses5 libstdc++6 libffi-dev libssl-dev
+          pip install --upgrade pip
+          pip install buildozer cython virtualenv
 
-    - name: Build APK with Buildozer
-      uses: Zenahr/buildozer-action@v1.2.0
-      with:
-        command: buildozer android debug
+      - name: Initialize and configure Buildozer
+        run: |
+          if [ ! -f buildozer.spec ]; then buildozer init; fi
+          sed -i 's/^# *log_level =.*/log_level = 2/' buildozer.spec
+          sed -i 's/^# *package.domain =.*/package.domain = org.tapout.app/' buildozer.spec
+          sed -i 's/^# *source.include_exts =.*/source.include_exts = py,png,jpg,kv,atlas/' buildozer.spec
+          sed -i 's/^# *requirements =.*/requirements = python3,kivy,pyjnius/' buildozer.spec
+          sed -i 's/^# *android.permissions =.*/android.permissions = INTERNET,PACKAGE_USAGE_STATS/' buildozer.spec
+          sed -i 's/^# *orientation =.*/orientation = portrait/' buildozer.spec
+          sed -i 's/^# *title =.*/title = TapOut/' buildozer.spec
 
-    - name: Upload APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: TapOut-APK
-        path: bin/*.apk
+      - name: Build the APK
+        run: |
+          buildozer android debug
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tapout-apk
+          path: bin/*.apk
