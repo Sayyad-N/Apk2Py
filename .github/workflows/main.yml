@@ -1,0 +1,41 @@
+name: Build APK with Buildozer
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 🔁 Checkout code
+      uses: actions/checkout@v3
+
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: 📦 Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y build-essential ccache libncurses5 libstdc++6 libffi-dev \
+            libssl-dev libsqlite3-dev zlib1g-dev libncursesw5-dev libtinfo-dev \
+            libreadline6-dev libgdbm-dev libbz2-dev liblzma-dev libgstreamer1.0-dev \
+            gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-tools \
+            python3-pip openjdk-17-jdk unzip zip
+
+        pip install --upgrade pip
+        pip install buildozer cython
+
+    - name: 📦 Initialize buildozer
+      run: |
+        buildozer android debug
+
+    - name: 🚀 Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: TapOut-APK
+        path: bin/*.apk
