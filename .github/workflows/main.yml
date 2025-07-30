@@ -19,7 +19,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt install -y zip unzip openjdk-17-jdk
+        sudo apt install -y zip unzip openjdk-17-jdk libncurses5 lib32z1
         pip install --upgrade pip
         pip install cython virtualenv
         
