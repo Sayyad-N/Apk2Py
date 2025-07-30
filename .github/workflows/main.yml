@@ -1,49 +1,49 @@
-name: Android APK Build for TapOut
-
+name: Build APK
 on:
-  workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
-  build-apk:
-    name: Build APK using Buildozer
+  build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y zip unzip openjdk-17-jdk python3-pip git curl libncurses5 libstdc++6 libffi-dev libssl-dev
-          pip install --upgrade pip
-          pip install buildozer cython virtualenv
-
-      - name: Initialize and configure Buildozer
-        run: |
-          if [ ! -f buildozer.spec ]; then buildozer init; fi
-          sed -i 's/^# *log_level =.*/log_level = 2/' buildozer.spec
-          sed -i 's/^# *package.domain =.*/package.domain = org.tapout.app/' buildozer.spec
-          sed -i 's/^# *source.include_exts =.*/source.include_exts = py,png,jpg,kv,atlas/' buildozer.spec
-          sed -i 's/^# *requirements =.*/requirements = python3,kivy,pyjnius/' buildozer.spec
-          sed -i 's/^# *android.permissions =.*/android.permissions = INTERNET,PACKAGE_USAGE_STATS/' buildozer.spec
-          sed -i 's/^# *orientation =.*/orientation = portrait/' buildozer.spec
-          sed -i 's/^# *title =.*/title = TapOut/' buildozer.spec
-
-      - name: Build the APK
-        run: |
-          buildozer android debug
-
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: tapout-apk
-          path: bin/*.apk
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.10"
+        
+    - name: Install system dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y zip unzip openjdk-17-jdk wget
+        
+    - name: Install Python dependencies
+      run: |
+        pip install --upgrade pip
+        pip install cython virtualenv buildozer
+        
+    - name: Setup Android SDK
+      run: |
+        wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
+        unzip -q commandlinetools-linux-9477386_latest.zip
+        mkdir -p ~/.android/sdk/cmdline-tools
+        mv cmdline-tools ~/.android/sdk/cmdline-tools/latest
+        export ANDROID_SDK_ROOT=$HOME/.android/sdk
+        export PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin
+        yes | sdkmanager --licenses
+        
+    - name: Build APK
+      run: |
+        export ANDROID_SDK_ROOT=$HOME/.android/sdk
+        export PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin
+        buildozer android debug
+        
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: TapOut-APK
+        path: bin/*.apk
